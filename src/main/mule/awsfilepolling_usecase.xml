@@ -32,7 +32,7 @@ payload]]></ee:set-payload>
 		</ee:transform>
 	</flow>
 	<flow name="ReadFileFlow" doc:id="7d7abcf2-fd29-4c8a-8ed0-070cf6212c62" >
-		<http:listener doc:name="Listener" doc:id="d447a951-6d7e-4210-8da7-7ebff5ca08b8" config-ref="HttpConfig" path="/readFile1"/>
+		<http:listener doc:name="Listener" doc:id="d447a951-6d7e-4210-8da7-7ebff5ca08b8" config-ref="HttpConfig" path="/readFile"/>
 		<choice doc:name="Choice" doc:id="19401f67-b4a5-417f-868d-eda6d62dc329" >
 			<when expression='#[payload.Records.eventName[0]=="ObjectCreated:Put" and payload.Records.s3.bucket.name[0]=="mysecondbucket-bakhtiar"]'>
 				<s3:get-object doc:name="Read File" doc:id="6351237e-1770-43cd-a2ba-7ce6f0ad19d5" config-ref="Amazon_S3_Configuration" bucketName="#[payload.Records.s3.bucket.name[0]]" key="#[payload.Records.s3.object[0].key]"/>
@@ -46,15 +46,7 @@ payload]]></ee:set-payload>
 				</ee:transform>
 			</when>
 			<otherwise >
-				<ee:transform doc:name='payload' doc:id="6e21e6b4-c939-459c-985f-a724d81eff98" >
-					<ee:message >
-						<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
----
-payload]]></ee:set-payload>
-					</ee:message>
-				</ee:transform>
-				<ee:transform doc:name="Transform Message" doc:id="6d887e1d-d96c-4231-911c-78b824b1b576" >
+				<ee:transform doc:name='"Invalid Bucket Name"' doc:id="6d887e1d-d96c-4231-911c-78b824b1b576" >
 					<ee:message >
 						<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
@@ -65,18 +57,6 @@ output application/json
 			
 </otherwise>
 		</choice>
-	</flow>
-	<flow name="Copy_of_ReadFileFlow" doc:id="8e19c811-4b85-4528-9e19-177c514f3054" >
-		<http:listener doc:name="Copy_of_Listener" doc:id="6f67d705-da95-41d8-9a93-97805eccb547" config-ref="HttpConfig" path="/readFile" />
-		<logger level="INFO" doc:name="Logger" doc:id="5b3fa4b1-0e5b-49f0-b433-472c55825d83" message="#[payload]"/>
-		<ee:transform doc:name="Transform Message" doc:id="aa7ac033-d60f-4f35-bac9-4eaa16ee9d3b" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
----
-payload]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
 	</flow>
 
 </mule>
