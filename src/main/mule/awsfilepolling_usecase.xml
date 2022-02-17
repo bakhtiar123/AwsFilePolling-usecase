@@ -33,15 +33,8 @@ payload]]></ee:set-payload>
 	</flow>
 	<flow name="ReadFileFlow" doc:id="7d7abcf2-fd29-4c8a-8ed0-070cf6212c62" >
 		<http:listener doc:name="Listener" doc:id="d447a951-6d7e-4210-8da7-7ebff5ca08b8" config-ref="HttpConfig" path="/readFile"/>
-		<ee:transform doc:name="Transform Message" doc:id="d2f92914-11ff-4e2d-b31c-bec52130a685" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
----
-read(payload.Message,"application/json")]]></ee:set-payload>
-			</ee:message>
-		</ee:transform>
-		<logger level="INFO" doc:name="Logger" doc:id="5db95c10-b604-46a1-a792-0d36b744a4c6" message="#[payload]"/>
+		<logger level="INFO" doc:name="Logger" doc:id="2a1cfe7c-b505-4195-a22d-db6fadd121e1" message="#[payload]"/>
+		<logger level="INFO" doc:name="Logger" doc:id="8e49eb78-9d99-4392-b0db-9416d45ceb86" message="#[payload.Message]"/>
 		<choice doc:name="Choice" doc:id="19401f67-b4a5-417f-868d-eda6d62dc329" >
 			<when expression='#[payload.Records.eventName[0]=="ObjectCreated:Put" and payload.Records.s3.bucket.name[0] == "usecasebucket-bakhtiar"]'>
 				<s3:get-object doc:name="Read File" doc:id="6351237e-1770-43cd-a2ba-7ce6f0ad19d5" config-ref="Amazon_S3_Configuration" bucketName="#[payload.Records.s3.bucket.name[0]]" key="#[payload.Records.s3.object[0].key]"/>
