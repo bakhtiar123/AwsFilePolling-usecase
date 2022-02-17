@@ -1,0 +1,7 @@
+http:
+  host: "0.0.0.0"
+  port: "8081"
+  
+aws:
+  access: "![mQQSnLrNJXukGQUJyHQEKVw9Dv1+oDKr7+8UGd73pKk=]"
+  secret: "![Gcuj3X/pON+xyZMnvHksbJdPtPpeoVMYAFWBYGyMzQuSAxKsfGbYbntVBkmWVSEY]"

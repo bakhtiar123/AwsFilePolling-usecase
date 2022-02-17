@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:sns="http://www.mulesoft.org/schema/mule/sns" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:s3="http://www.mulesoft.org/schema/mule/s3" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/s3 http://www.mulesoft.org/schema/mule/s3/current/mule-s3.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/sns http://www.mulesoft.org/schema/mule/sns/current/mule-sns.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
+	<http:listener-config name="HttpConfig" doc:name="HTTP Listener config" doc:id="d694695a-43f1-42ca-93ce-1b876a9dcd27" >
+		<http:listener-connection host="${http.host}" port="${http.port}" />
+	</http:listener-config>
+	<s3:config name="Amazon_S3_Configuration" doc:name="Amazon S3 Configuration" doc:id="245b05fb-6956-42dd-b54a-a18258e2980e" >
+		<s3:basic-connection accessKey="${secure::aws.access}" secretKey="${secure::aws.secret}" />
+	</s3:config>
+	<configuration-properties doc:name="Configuration properties" doc:id="15662887-b91f-4f5e-b7db-c75adb765af8" file="config.yaml" />
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="56f818e5-0826-4e0c-823f-4edb53677646" file="config.yaml" key="bakhtiar12345678" />
+	<flow name="CreateObjectFlow" doc:id="15bfe2c0-a88a-464c-abb4-9290ce271d35" >
+		<http:listener doc:name="Listener" doc:id="8a9fad3d-9da4-4abf-a282-dfb86fd26e65" config-ref="HttpConfig" path="/createFile" allowedMethods="POST"/>
+		<logger level="INFO" doc:name="Log payload" doc:id="d542be4c-d929-4f3c-a016-fd28ae9dd6ec" message="#[payload]"/>
+		<s3:create-object doc:name="Create File" doc:id="d0b2027d-1e33-4da0-8a8a-605ab6eaea84" bucketName="usecasebucket-bakhtiar" key="#['MyFile' ++ (now() as String {format:'yyyy-dd-hh-mm-ss'}) ++ '.txt']" config-ref="Amazon_S3_Configuration"/>
+		<ee:transform doc:name="payload" doc:id="0d644cfa-adbe-404b-958e-bdb7e8937b2f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="ReadFileFlow" doc:id="7d7abcf2-fd29-4c8a-8ed0-070cf6212c62" >
+		<http:listener doc:name="Listener" doc:id="d447a951-6d7e-4210-8da7-7ebff5ca08b8" config-ref="HttpConfig" path="/readFile1"/>
+		<choice doc:name="Choice" doc:id="19401f67-b4a5-417f-868d-eda6d62dc329" >
+			<when expression='#[payload.Records.eventName[0]=="ObjectCreated:Put" and payload.Records.s3.bucket.name[0]=="mysecondbucket-bakhtiar"]'>
+				<s3:get-object doc:name="Read File" doc:id="6351237e-1770-43cd-a2ba-7ce6f0ad19d5" config-ref="Amazon_S3_Configuration" bucketName="#[payload.Records.s3.bucket.name[0]]" key="#[payload.Records.s3.object[0].key]"/>
+				<ee:transform doc:name="Payload" doc:id="2a5e9cfa-3117-476a-afb1-72e12da39261" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name='payload' doc:id="6e21e6b4-c939-459c-985f-a724d81eff98" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<ee:transform doc:name="Transform Message" doc:id="6d887e1d-d96c-4231-911c-78b824b1b576" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+"Invalid Bucket Name"]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			
+</otherwise>
+		</choice>
+	</flow>
+	<flow name="Copy_of_ReadFileFlow" doc:id="8e19c811-4b85-4528-9e19-177c514f3054" >
+		<http:listener doc:name="Copy_of_Listener" doc:id="6f67d705-da95-41d8-9a93-97805eccb547" config-ref="HttpConfig" path="/readFile" />
+		<logger level="INFO" doc:name="Logger" doc:id="5b3fa4b1-0e5b-49f0-b433-472c55825d83" message="#[payload]"/>
+		<ee:transform doc:name="Transform Message" doc:id="aa7ac033-d60f-4f35-bac9-4eaa16ee9d3b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+
+</mule>
