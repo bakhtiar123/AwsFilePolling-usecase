@@ -35,7 +35,7 @@ assert_expression_payload::main({payload: payload, attributes: attributes, vars:
 			</munit-tools:assert>
 		</munit:validation>
 	</munit:test>
-	<munit:test name="CreateObjectFlow-test1" doc:id="52834449-ab29-4e07-a6e4-9c7ff7736a1c" >
+	<munit:test name="CreateObjectFlow-Error" doc:id="52834449-ab29-4e07-a6e4-9c7ff7736a1c" >
 		<munit:behavior >
 			<munit:set-event doc:name="Set Input" doc:id="2386e5a6-bc43-487a-8310-d0429fbc8b19" >
 				<munit:attributes value="#[readUrl('classpath://CreateObjectFlowtest1\set-event_attributes.dwl')]" />
@@ -54,6 +54,67 @@ assert_expression_payload::main({payload: payload, attributes: attributes, vars:
 		<munit:validation >
 			<munit-tools:assert-that doc:name="Assert that" doc:id="c66bf705-8540-4c9f-ad39-a3f5b3b23d38" is="#[MunitTools::equalTo('Payload is empty')]" expression="#[payload.Message]"/>
 		</munit:validation>
+	</munit:test>
+	<munit:test name="ReadFileFlow-test" doc:id="f8967ef5-4dc9-4d3a-95be-58e5980cfcd8" >
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock Read File" doc:id="3b1916bf-eb9f-46a2-96f5-241e3e604a39" processor="s3:get-object">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="6351237e-1770-43cd-a2ba-7ce6f0ad19d5" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[output application/octet-stream --- readUrl('classpath://ReadFileFlowtest\mock_payload.dwl')]" mediaType="application/octet-stream" encoding="UTF-8" />
+					<munit-tools:attributes value="#[readUrl('classpath://ReadFileFlowtest\mock_attributes.dwl')]" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit:set-event doc:name="Set Input" doc:id="47459bb0-4e3c-48ff-975b-c02ff4b15e33" >
+				<munit:payload value="#[output application/octet-stream --- readUrl('classpath://ReadFileFlowtest\set-event_payload.dwl')]" encoding="UTF-8" mediaType="application/octet-stream" />
+				<munit:attributes value="#[readUrl('classpath://ReadFileFlowtest\set-event_attributes.dwl')]" />
+			</munit:set-event>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to ReadFileFlow" doc:id="3fe7bd20-13da-4ba7-b071-9fa05e1bbbe7" name="ReadFileFlow"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert doc:name="Assert payload" doc:id="b9c72099-9643-4597-9027-6670977c481e" message="The payload does not match">
+				<munit-tools:that ><![CDATA[#[%dw 2.0
+import ReadFileFlowtest::assert_expression_payload
+---
+assert_expression_payload::main({payload: payload, attributes: attributes, vars: vars})]]]></munit-tools:that>
+			</munit-tools:assert>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="ReadFileFlow-test-Error" doc:id="f0f717d4-6536-40fb-886e-e0d2a1b082ba" >
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock Read File" doc:id="eda972b4-d93d-4522-9178-508307c0413d" processor="s3:get-object">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="6351237e-1770-43cd-a2ba-7ce6f0ad19d5" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[output application/octet-stream --- readUrl('classpath://ReadFileFlowtest\mock_payload.dwl')]" mediaType="application/octet-stream" encoding="UTF-8" />
+					<munit-tools:attributes value="#[readUrl('classpath://ReadFileFlowtest\mock_attributes.dwl')]" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit:set-event doc:name="Set Input" doc:id="ec6b182f-f515-4643-8977-1c8b1cb3eb3c" >
+				<munit:payload value="#[output application/octet-stream --- readUrl('classpath://ReadFileFlowtest\set-event_payloadError.dwl')]" encoding="UTF-8" mediaType="application/octet-stream" />
+				<munit:attributes value="#[readUrl('classpath://ReadFileFlowtest\set-event_attributes.dwl')]" />
+			
+</munit:set-event>
+		</munit:behavior>
+		<munit:execution>
+			<try doc:name="Try" doc:id="7c8df69a-f2b7-46af-ba7d-fcfb8e3af238" >
+				<flow-ref doc:name="Flow-ref to ReadFileFlow" doc:id="0979dcc7-392e-4497-8363-9c7537200f8b" name="ReadFileFlow" />
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="0527dc24-6377-476a-b456-f3cba7ba83db" >
+						<logger level="INFO" doc:name="Logger" doc:id="e897351f-61be-4805-b120-db35bbe85aaa" message="ReadFile Continue ======================&gt;"/>
+					</on-error-continue>
+				</error-handler>
+			</try>
+
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="Assert that" doc:id="f8eab675-4870-462f-a77b-17e0ce4fb79c" is="#[MunitTools::equalTo('Invalid Bucket Name')]" expression="#[payload.Message]" />
+		
+</munit:validation>
 	</munit:test>
 
 

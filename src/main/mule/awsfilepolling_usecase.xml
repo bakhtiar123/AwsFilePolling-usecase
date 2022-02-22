@@ -76,7 +76,11 @@ output application/json
 	
 </flow>
 	<flow name="ReadFileFlow" doc:id="7d7abcf2-fd29-4c8a-8ed0-070cf6212c62" >
-		<http:listener doc:name="Listener" doc:id="d447a951-6d7e-4210-8da7-7ebff5ca08b8" config-ref="HttpConfig" path="/readFile"/>
+		<http:listener doc:name="Listener" doc:id="d447a951-6d7e-4210-8da7-7ebff5ca08b8" config-ref="HttpConfig" path="/readFile">
+			<http:error-response statusCode="#[vars.httpStatusCode]">
+				<http:body ><![CDATA[#[payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
 		<logger level="INFO" doc:name="payload" doc:id="2a1cfe7c-b505-4195-a22d-db6fadd121e1" message="#[payload]"/>
 		<ee:transform doc:name="Binary to Json" doc:id="8d1a6e37-8d19-49ba-9431-465d12d14441" >
 			<ee:message >
