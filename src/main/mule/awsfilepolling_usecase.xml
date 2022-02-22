@@ -11,7 +11,7 @@ http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mu
 http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
 http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
 	<http:listener-config name="HttpConfig" doc:name="HTTP Listener config" doc:id="d694695a-43f1-42ca-93ce-1b876a9dcd27" >
-		<http:listener-connection host="${http.host}" port="${http.port}" />
+		<http:listener-connection host="0.0.0.0" port="${http.port}" />
 	</http:listener-config>
 	<s3:config name="Amazon_S3_Configuration" doc:name="Amazon S3 Configuration" doc:id="245b05fb-6956-42dd-b54a-a18258e2980e" >
 		<s3:basic-connection accessKey="${secure::aws.access}" secretKey="${secure::aws.secret}" />
