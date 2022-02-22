@@ -19,22 +19,66 @@ http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/sc
 	<configuration-properties doc:name="Configuration properties" doc:id="15662887-b91f-4f5e-b7db-c75adb765af8" file="config.yaml" />
 	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="56f818e5-0826-4e0c-823f-4edb53677646" file="config.yaml" key="bakhtiar12345678" />
 	<flow name="CreateObjectFlow" doc:id="15bfe2c0-a88a-464c-abb4-9290ce271d35" >
-		<http:listener doc:name="Listener" doc:id="8a9fad3d-9da4-4abf-a282-dfb86fd26e65" config-ref="HttpConfig" path="/createFile" allowedMethods="POST"/>
+		<http:listener doc:name="Listener" doc:id="8a9fad3d-9da4-4abf-a282-dfb86fd26e65" config-ref="HttpConfig" path="/createFile" allowedMethods="POST">
+			<http:error-response statusCode="#[vars.httpStatusCode]">
+				<http:body ><![CDATA[#[output application/json --- payload]]]></http:body>
+			</http:error-response>
+		</http:listener>
 		<logger level="INFO" doc:name="Log payload" doc:id="d542be4c-d929-4f3c-a016-fd28ae9dd6ec" message="#[payload]"/>
-		<s3:create-object doc:name="Create File" doc:id="d0b2027d-1e33-4da0-8a8a-605ab6eaea84" bucketName="usecasebucket-bakhtiar" key="#['MyFile' ++ (now() as String {format:'yyyy-dd-hh-mm-ss'}) ++ '.txt']" config-ref="Amazon_S3_Configuration"/>
-		<ee:transform doc:name="payload" doc:id="0d644cfa-adbe-404b-958e-bdb7e8937b2f" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+		<choice doc:name="Choice" doc:id="137c2bfb-ba48-471e-930c-8833be169a31" >
+			<when expression="#[isEmpty(payload) != true]">
+				<s3:create-object doc:name="Create File" doc:id="d0b2027d-1e33-4da0-8a8a-605ab6eaea84" bucketName="usecasebucket-bakhtiar" key="#['MyFile' ++ (now() as String {format:'yyyy-dd-hh-mm-ss'}) ++ '.txt']" config-ref="Amazon_S3_Configuration" />
+				<ee:transform doc:name="payload" doc:id="0d644cfa-adbe-404b-958e-bdb7e8937b2f">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 payload]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-	</flow>
+			</when>
+			<otherwise >
+				<raise-error doc:name="Raise error" doc:id="500cb9c4-caf9-4894-845f-29edaa21b30e" type="FILEPOLLING:EMPTYPAYLOAD"/>
+			</otherwise>
+		</choice>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="700685a1-8aa6-4075-b1e5-9f4cb7bd949c" type="FILEPOLLING:EMPTYPAYLOAD">
+				<ee:transform doc:name="Payload is empty" doc:id="8d14039a-405b-48af-8601-6d0d02ef8734" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Message": "Payload is empty"
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatusCode" ><![CDATA[%dw 2.0
+output application/java
+---
+400]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-propagate>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="4a61475f-3387-4635-bd00-d4a5dce39bba" type="ANY">
+				<ee:transform doc:name="error.description" doc:id="8f706d21-7130-49d3-84fe-2f04e9f6e9e0" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Message": error.description
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</on-error-propagate>
+		</error-handler>
+	
+</flow>
 	<flow name="ReadFileFlow" doc:id="7d7abcf2-fd29-4c8a-8ed0-070cf6212c62" >
 		<http:listener doc:name="Listener" doc:id="d447a951-6d7e-4210-8da7-7ebff5ca08b8" config-ref="HttpConfig" path="/readFile"/>
-		<logger level="INFO" doc:name="Logger" doc:id="2a1cfe7c-b505-4195-a22d-db6fadd121e1" message="#[payload]"/>
-		<ee:transform doc:name="Transform Message" doc:id="8d1a6e37-8d19-49ba-9431-465d12d14441" >
+		<logger level="INFO" doc:name="payload" doc:id="2a1cfe7c-b505-4195-a22d-db6fadd121e1" message="#[payload]"/>
+		<ee:transform doc:name="Binary to Json" doc:id="8d1a6e37-8d19-49ba-9431-465d12d14441" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
@@ -42,25 +86,51 @@ output application/json
 read(payload,"application/json")]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<logger level="INFO" doc:name="Logger" doc:id="92da7021-5363-45ac-bffe-0f1f1a5c218a" message="#[payload]"/>
+		<logger level="INFO" doc:name="Json Payload" doc:id="92da7021-5363-45ac-bffe-0f1f1a5c218a" message="#[payload]"/>
 		<choice doc:name="Choice" doc:id="19401f67-b4a5-417f-868d-eda6d62dc329" >
 			<when expression='#[payload.Records.eventName[0]=="ObjectCreated:Put" and payload.Records.s3.bucket.name[0] == "usecasebucket-bakhtiar"]'>
 				<s3:get-object doc:name="Read File" doc:id="6351237e-1770-43cd-a2ba-7ce6f0ad19d5" config-ref="Amazon_S3_Configuration" bucketName="#[payload.Records.s3.bucket.name[0]]" key="#[payload.Records.s3.object[0].key]"/>
-				<logger level="INFO" doc:name="Logger" doc:id="679b266d-6caa-4be4-a366-6c6e5189a1d3" message="#[payload]"/>
+				<logger level="INFO" doc:name="Log File Payload" doc:id="679b266d-6caa-4be4-a366-6c6e5189a1d3" message="#[payload]"/>
 			
 </when>
 			<otherwise >
-				<ee:transform doc:name='"Invalid Bucket Name"' doc:id="6d887e1d-d96c-4231-911c-78b824b1b576" >
+				<raise-error doc:name="Raise error" doc:id="6867e327-bd7a-4761-ad0d-93aa38d093e9" type="FILEPOLLING:INVALIDBUCKETNAME"/>
+			
+</otherwise>
+		</choice>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="510badf9-7d9e-4449-b5a5-0dd37222f411" type="FILEPOLLING:INVALIDBUCKETNAME">
+				<ee:transform doc:name='"Invalid Bucket Name"' doc:id="6d887e1d-d96c-4231-911c-78b824b1b576">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Message": "Invalid Bucket Name"
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="httpStatusCode" ><![CDATA[%dw 2.0
+output application/java
+---
+500]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+			</on-error-propagate>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="9c951963-fe9c-4fba-b724-5a3debbbaf2d" type="ANY">
+				<ee:transform doc:name="error.description" doc:id="24b787d2-b6f4-4fdb-a3c5-06341e934248" >
 					<ee:message >
 						<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
 ---
-"Invalid Bucket Name"]]></ee:set-payload>
+{
+	"Message": error.description
+}]]></ee:set-payload>
 					</ee:message>
 				</ee:transform>
-			
-</otherwise>
-		</choice>
-	</flow>
+			</on-error-propagate>
+		</error-handler>
+	
+</flow>
 
 </mule>
